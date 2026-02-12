@@ -335,11 +335,12 @@
       </div>
     </div>
 
-    <!-- Simple audio element; source is a tiny public-domain "hello" recording -->
+    <!-- Simple media element; ~1 minute CC BY video from Wikimedia Commons.
+         iOS will happily play just the audio portion in the background. -->
     <audio
       id="helloAudio"
       preload="auto"
-      src="https://upload.wikimedia.org/wikipedia/commons/5/52/En-us-hello.ogg"
+      src="https://upload.wikimedia.org/wikipedia/commons/a/a7/How_to_make_video.webm"
     ></audio>
 
     <script>
@@ -351,17 +352,6 @@
       const durationEl = document.getElementById("duration");
       const barFill = document.getElementById("barFill");
 
-      // We want the clip to effectively be a 20s loop.
-      // The underlying audio is short, so we loop it and track a virtual
-      // 20-second "session" timer for the UI and auto-stop.
-      const TARGET_DURATION = 20; // seconds
-      let virtualElapsed = 0;
-      let playStartedAt = null;
-      let progressRAF = null;
-
-      // Ensure the browser loops the raw audio clip
-      audio.loop = true;
-
       function formatTime(seconds) {
         if (!isFinite(seconds)) return "0:00";
         const m = Math.floor(seconds / 60);
@@ -369,12 +359,6 @@
           .toString()
           .padStart(2, "0");
         return `${m}:${s}`;
-      }
-
-      function getVirtualElapsed() {
-        if (playStartedAt === null) return Math.min(virtualElapsed, TARGET_DURATION);
-        const now = performance.now() / 1000;
-        return Math.min(TARGET_DURATION, virtualElapsed + (now - playStartedAt));
       }
 
       function setPlayingUI(isPlaying) {
@@ -393,39 +377,11 @@
       }
 
       function updateProgress() {
-        const elapsed = getVirtualElapsed();
-        currentTimeEl.textContent = formatTime(elapsed);
-        durationEl.textContent = formatTime(TARGET_DURATION);
-        const ratio = TARGET_DURATION ? Math.min(elapsed / TARGET_DURATION, 1) : 0;
+        const { currentTime, duration } = audio;
+        currentTimeEl.textContent = formatTime(currentTime || 0);
+        durationEl.textContent = formatTime(duration || 0);
+        const ratio = duration ? Math.min(currentTime / duration, 1) : 0;
         barFill.style.transform = `scaleX(${ratio})`;
-      }
-
-      function startProgressLoop() {
-        if (progressRAF !== null) return;
-        const loop = () => {
-          const elapsed = getVirtualElapsed();
-          updateProgress();
-          if (elapsed >= TARGET_DURATION) {
-            // Stop playback after we've virtually reached 20 seconds.
-            audio.pause();
-            audio.currentTime = 0;
-            virtualElapsed = 0;
-            playStartedAt = null;
-            progressRAF = null;
-            setPlayingUI(false);
-            updateProgress();
-            return;
-          }
-          progressRAF = requestAnimationFrame(loop);
-        };
-        progressRAF = requestAnimationFrame(loop);
-      }
-
-      function stopProgressLoop() {
-        if (progressRAF !== null) {
-          cancelAnimationFrame(progressRAF);
-          progressRAF = null;
-        }
       }
 
       playToggle.addEventListener("click", async () => {
@@ -442,27 +398,21 @@
       });
 
       audio.addEventListener("play", () => {
-        if (getVirtualElapsed() >= TARGET_DURATION) {
-          // If we somehow resumed past 20s, reset.
-          virtualElapsed = 0;
-        }
-        if (playStartedAt === null) {
-          playStartedAt = performance.now() / 1000;
-        }
         setPlayingUI(true);
-        startProgressLoop();
+        if ("mediaSession" in navigator) {
+          navigator.mediaSession.playbackState = "playing";
+        }
       });
 
       audio.addEventListener("pause", () => {
-        // Capture elapsed time up to the moment of pause.
-        virtualElapsed = getVirtualElapsed();
-        playStartedAt = null;
         setPlayingUI(false);
-        stopProgressLoop();
+        if ("mediaSession" in navigator) {
+          navigator.mediaSession.playbackState = "paused";
+        }
       });
 
-      // Initialize progress display to 0 / 0:20
-      updateProgress();
+      audio.addEventListener("timeupdate", updateProgress);
+      audio.addEventListener("loadedmetadata", updateProgress);
 
       // Optional: advertise metadata to iOS lock screen / Control Center
       if ("mediaSession" in navigator) {
