@@ -288,11 +288,12 @@
             playing and appear in the Now Playing widget.
           </div>
 
+          <!-- Long clip player (existing behavior) -->
           <div class="player">
             <div class="cover" aria-hidden="true"></div>
 
             <div class="meta">
-              <div class="track-title">Hello (demo)</div>
+              <div class="track-title">Hello (long demo)</div>
               <div class="track-artist">Public domain pronunciation sample</div>
               <div class="track-status" id="status">Idle</div>
 
@@ -305,7 +306,7 @@
               </div>
             </div>
 
-            <button class="play-toggle" id="playToggle" aria-label="Play">
+            <button class="play-toggle" id="playToggle" aria-label="Play long clip">
               <svg
                 class="icon"
                 viewBox="0 0 24 24"
@@ -314,6 +315,44 @@
               >
                 <path
                   id="playIcon"
+                  d="M8 5.5V18.5L18 12L8 5.5Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Short ~20s clip player (new) -->
+          <div class="player">
+            <div class="cover" aria-hidden="true"></div>
+
+            <div class="meta">
+              <div class="track-title">Hello World (20s test)</div>
+              <div class="track-artist">White noise sample from Wikipedia</div>
+              <div class="track-status" id="statusShort">Idle</div>
+
+              <div class="progress-row">
+                <span class="time" id="currentTimeShort">0:00</span>
+                <div class="bar">
+                  <div class="bar-fill" id="barFillShort"></div>
+                </div>
+                <span class="time" id="durationShort">0:20</span>
+              </div>
+            </div>
+
+            <button
+              class="play-toggle"
+              id="playToggleShort"
+              aria-label="Play 20 second clip"
+            >
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  id="playIconShort"
                   d="M8 5.5V18.5L18 12L8 5.5Z"
                   fill="currentColor"
                 />
@@ -335,7 +374,7 @@
       </div>
     </div>
 
-    <!-- Simple media element; ~1 minute CC BY video from Wikimedia Commons.
+    <!-- Simple media elements; ~1 minute CC BY video (long) + 20s audio (short) from Wikimedia Commons.
          iOS will happily play just the audio portion in the background. -->
     <audio
       id="helloAudio"
@@ -343,14 +382,29 @@
       src="https://upload.wikimedia.org/wikipedia/commons/a/a7/How_to_make_video.webm"
     ></audio>
 
+    <audio
+      id="shortAudio"
+      preload="auto"
+      src="https://upload.wikimedia.org/wikipedia/commons/9/98/White-noise-sound-20sec-mono-44100Hz.ogg"
+    ></audio>
+
     <script>
       const audio = document.getElementById("helloAudio");
+      const shortAudio = document.getElementById("shortAudio");
+
       const playToggle = document.getElementById("playToggle");
       const playIcon = document.getElementById("playIcon");
       const statusEl = document.getElementById("status");
       const currentTimeEl = document.getElementById("currentTime");
       const durationEl = document.getElementById("duration");
       const barFill = document.getElementById("barFill");
+
+      const playToggleShort = document.getElementById("playToggleShort");
+      const playIconShort = document.getElementById("playIconShort");
+      const statusShortEl = document.getElementById("statusShort");
+      const currentTimeShortEl = document.getElementById("currentTimeShort");
+      const durationShortEl = document.getElementById("durationShort");
+      const barFillShort = document.getElementById("barFillShort");
 
       function formatTime(seconds) {
         if (!isFinite(seconds)) return "0:00";
@@ -368,11 +422,11 @@
             "M9 6.5C8.44772 6.5 8 6.94772 8 7.5V16.5C8 17.0523 8.44772 17.5 9 17.5H10C10.5523 17.5 11 17.0523 11 16.5V7.5C11 6.94772 10.5523 6.5 10 6.5H9ZM14 6.5C13.4477 6.5 13 6.94772 13 7.5V16.5C13 17.0523 13.4477 17.5 14 17.5H15C15.5523 17.5 16 17.0523 16 16.5V7.5C16 6.94772 15.5523 6.5 15 6.5H14Z"
           );
           statusEl.textContent = "Playing on this device";
-          playToggle.setAttribute("aria-label", "Pause");
+          playToggle.setAttribute("aria-label", "Pause long clip");
         } else {
           playIcon.setAttribute("d", "M8 5.5V18.5L18 12L8 5.5Z");
           statusEl.textContent = "Paused";
-          playToggle.setAttribute("aria-label", "Play");
+          playToggle.setAttribute("aria-label", "Play long clip");
         }
       }
 
@@ -384,9 +438,52 @@
         barFill.style.transform = `scaleX(${ratio})`;
       }
 
+      function setPlayingUIShort(isPlaying) {
+        if (isPlaying) {
+          playIconShort.setAttribute(
+            "d",
+            "M9 6.5C8.44772 6.5 8 6.94772 8 7.5V16.5C8 17.0523 8.44772 17.5 9 17.5H10C10.5523 17.5 11 17.0523 11 16.5V7.5C11 6.94772 10.5523 6.5 10 6.5H9ZM14 6.5C13.4477 6.5 13 6.94772 13 7.5V16.5C13 17.0523 13.4477 17.5 14 17.5H15C15.5523 17.5 16 17.0523 16 16.5V7.5C16 6.94772 15.5523 6.5 15 6.5H14Z"
+          );
+          statusShortEl.textContent = "Playing 20s test clip";
+          playToggleShort.setAttribute("aria-label", "Pause 20 second clip");
+        } else {
+          playIconShort.setAttribute("d", "M8 5.5V18.5L18 12L8 5.5Z");
+          statusShortEl.textContent = "Paused";
+          playToggleShort.setAttribute("aria-label", "Play 20 second clip");
+        }
+      }
+
+      function updateProgressShort() {
+        const { currentTime, duration } = shortAudio;
+        currentTimeShortEl.textContent = formatTime(currentTime || 0);
+        durationShortEl.textContent = formatTime(duration || 0);
+        const ratio = duration ? Math.min(currentTime / duration, 1) : 0;
+        barFillShort.style.transform = `scaleX(${ratio})`;
+      }
+
+      function configureMediaSession(metadata, targetAudio) {
+        if (!("mediaSession" in navigator)) return;
+
+        navigator.mediaSession.metadata = new MediaMetadata(metadata);
+
+        navigator.mediaSession.setActionHandler("play", async () => {
+          try {
+            await targetAudio.play();
+          } catch (e) {
+            console.error(e);
+          }
+        });
+
+        navigator.mediaSession.setActionHandler("pause", () => targetAudio.pause());
+      }
+
       playToggle.addEventListener("click", async () => {
         try {
           if (audio.paused) {
+            // Ensure only one clip plays at a time
+            if (!shortAudio.paused) {
+              shortAudio.pause();
+            }
             await audio.play();
           } else {
             audio.pause();
@@ -397,11 +494,45 @@
         }
       });
 
+      playToggleShort.addEventListener("click", async () => {
+        try {
+          if (shortAudio.paused) {
+            // Ensure only one clip plays at a time
+            if (!audio.paused) {
+              audio.pause();
+            }
+            await shortAudio.play();
+          } else {
+            shortAudio.pause();
+          }
+        } catch (err) {
+          console.error("Playback failed:", err);
+          statusShortEl.textContent = "Tap again to allow audio";
+        }
+      });
+
       audio.addEventListener("play", () => {
         setPlayingUI(true);
         if ("mediaSession" in navigator) {
           navigator.mediaSession.playbackState = "playing";
         }
+
+        configureMediaSession(
+          {
+            title: "Hello (long demo)",
+            artist: "Public domain sample",
+            album: "Hello World Test - Long Clip",
+            artwork: [
+              {
+                src:
+                  "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Ambox_content.png/256px-Ambox_content.png",
+                sizes: "256x256",
+                type: "image/png",
+              },
+            ],
+          },
+          audio
+        );
       });
 
       audio.addEventListener("pause", () => {
@@ -414,31 +545,39 @@
       audio.addEventListener("timeupdate", updateProgress);
       audio.addEventListener("loadedmetadata", updateProgress);
 
-      // Optional: advertise metadata to iOS lock screen / Control Center
-      if ("mediaSession" in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: "Hello (demo)",
-          artist: "Public domain sample",
-          album: "Hello World Test",
-          artwork: [
-            {
-              src:
-                "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Ambox_content.png/256px-Ambox_content.png",
-              sizes: "256x256",
-              type: "image/png",
-            },
-          ],
-        });
+      shortAudio.addEventListener("play", () => {
+        setPlayingUIShort(true);
+        if ("mediaSession" in navigator) {
+          navigator.mediaSession.playbackState = "playing";
+        }
 
-        navigator.mediaSession.setActionHandler("play", async () => {
-          try {
-            await audio.play();
-          } catch (e) {
-            console.error(e);
-          }
-        });
-        navigator.mediaSession.setActionHandler("pause", () => audio.pause());
-      }
+        configureMediaSession(
+          {
+            title: "Hello World (20s test)",
+            artist: "White noise sample (20s)",
+            album: "Hello World Test - Short Clip",
+            artwork: [
+              {
+                src:
+                  "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Ambox_content.png/256px-Ambox_content.png",
+                sizes: "256x256",
+                type: "image/png",
+              },
+            ],
+          },
+          shortAudio
+        );
+      });
+
+      shortAudio.addEventListener("pause", () => {
+        setPlayingUIShort(false);
+        if ("mediaSession" in navigator) {
+          navigator.mediaSession.playbackState = "paused";
+        }
+      });
+
+      shortAudio.addEventListener("timeupdate", updateProgressShort);
+      shortAudio.addEventListener("loadedmetadata", updateProgressShort);
     </script>
   </body>
 </html>
